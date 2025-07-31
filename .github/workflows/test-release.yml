@@ -6,10 +6,6 @@ concurrency:
 
 on:
   workflow_dispatch: # For on demand runs
-  on:
-  release:
-    types:
-      - published
 
 jobs:
 
