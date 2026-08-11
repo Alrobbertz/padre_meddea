@@ -33,21 +33,21 @@ This function can read both binary (.DAT) and fits files (.fits).
 
 For photons data it returns a `~padre_meddea.spectrum.spectrum.PhotonList`.
 
-.. code-block:: python
+.. doctest:: python
 
     >>> from padre_meddea.io import read_file
     >>> ph_list = read_file("padre_meddea_l0test_photons_20250504T070411_v0.1.0.fits")  # doctest: +SKIP
 
 For spectrum data it returns a `~padre_meddea.spectrum.spectrum.SpectrumList`.
 
-.. code-block:: python
+.. doctest:: python
 
     >>> from padre_meddea.io import read_file
     >>> ph_list = read_file("padre_meddea_l0test_spectrum_20250504T070411_v0.1.0.fits")  # doctest: +SKIP
 
 For housekeeping data it returns two `~astropy.timeseries.TimeSeries` objects.
 
-.. code-block:: python
+.. doctest:: python
 
     >>> from padre_meddea.io import read_file
     >>> hk_ts, cmd_ts = read_file("padre_meddea_l0test_housekeeping_20250504T070411_v0.1.0.fits")  # doctest: +SKIP

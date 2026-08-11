@@ -19,7 +19,7 @@ from swxsoc.net.client import SWXSOCClient
 from swxsoc.util.util import create_science_filename, parse_science_filename
 
 import padre_meddea
-from padre_meddea import APID, EPOCH, log
+from padre_meddea import APID, EPOCH, _data_directory, log
 
 # used to identify bad times
 MIN_TIME_BAD = Time("2024-02-01T00:00")
@@ -35,6 +35,17 @@ __all__ = [
     "has_baseline",
     "is_consecutive",
 ]
+
+
+def get_photon_energy_calibration_file(this_time: Time) -> Path:
+    """Given a time return the appropriate energy calibration file for that time."""
+    file_directory = _data_directory / "science" / "calibration" / "energy"
+    file_list = list(file_directory.glob("*.npy"))
+
+    if len(file_list) == 0:
+        raise FileNotFoundError(f"No calibration files found in {file_directory}")
+    else:
+        return file_list[-1]  # TODO: implement time-based selection of calibration file
 
 
 def parse_raw_meddea_filename(filename: str):
@@ -417,3 +428,15 @@ def threshold_to_energy(threshold_value: int) -> u.Quantity:
 def get_file_time(filename) -> Time:
     """Given filename return the time stamp."""
     return Time(f"{filename[0:4]}-{filename[4:6]}-{filename[6:8]}T00:00")
+
+
+def _latest_file_by_pattern(file_directory: Path, file_pattern: str) -> Path:
+    """Return latest file matching pattern using filename date stamp."""
+    file_list = list(file_directory.glob(file_pattern))
+    if not file_list:
+        raise FileNotFoundError(f"No files found matching pattern: {file_pattern}")
+    file_table = TimeSeries(
+        time=Time([get_file_time(this_file.name) for this_file in file_list]),
+        data={"filename": [this_file.name for this_file in file_list]},
+    )
+    return file_directory / file_table[np.argmax(file_table.time)]["filename"]

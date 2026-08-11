@@ -12,6 +12,9 @@ authors = [
   {name = "Andrew Robbertz", email="andrew.l.robbertz@nasa.gov"},
   {name = "Damian Barrous-Dume", email="dbarrous@navteca.com"},
   {name = "Niharika Godbole", email="niharika.godbole@nasa.gov"},
+  {name = "Muriel Stiefel", email="muriel.stiefel@fhnw.ch"},
+  {name = "Gwendoline Marc", email="gwendoline.marc@cea.fr"},
+  {name = "Olivier Limousin", email="olivier.limousin@cea.fr"}
 ]
 license = {file = "LICENSE.rst"}
 requires-python = ">=3.10"
@@ -54,7 +57,7 @@ dev = [
 
 docs = ['sphinx', 'sphinx-automodapi', 'matplotlib', 'sphinx-copybutton', 'pydata-sphinx-theme']
 
-test = ['pytest', 'pytest-astropy', 'pytest-cov', 'coverage[toml]']
+test = ['pytest', 'pytest-astropy', 'pytest-cov', 'coverage[toml]', 'moto']
 
 style = ['ruff']
 

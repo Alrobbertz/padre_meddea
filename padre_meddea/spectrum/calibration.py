@@ -1,7 +1,7 @@
 """Tools to analyze and calibrate spectral data"""
 
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import astropy.units as u
 import matplotlib.pyplot as plt
@@ -12,6 +12,7 @@ from astropy.timeseries import TimeSeries
 from specutils import SpectralRegion, Spectrum1D
 from specutils.manipulation import extract_region
 
+import padre_meddea
 import padre_meddea.util.util as util
 from padre_meddea import _data_directory
 from padre_meddea.spectrum.spectrum import PhotonList, SpectrumList
@@ -20,6 +21,39 @@ from padre_meddea.util.pixels import PixelList
 specutils.conf.do_continuum_function_check = False
 
 BA_LINE_ENERGIES = [7.8, 11.8, 30.85, 35, 53.5, 57.8, 81] * u.keV
+
+
+def get_drm_files() -> List[Path]:
+    """Return the latest ARF and RMF files in the calibration directory.
+    Requires an internet connection to download the files if they are not already cached.
+
+    Returns
+    -------
+    List[Path]
+        The latest ARF and RMF files in the calibration directory.
+    """
+    import urllib.request
+
+    file_ids = {
+        "1vV7KcLDTZoYzU9Cm9IMOa6B3iUtoTlFG": "20260721_meddea_rmf.fits",
+        "1yC_gm3StXuM-weBTatRMdvvOcHhFYmHh": "20260721_meddea_arf.fits",
+    }
+    download_dir = padre_meddea.config.get("downloads", {}).get("download_dir")
+    if download_dir:
+        base_dir = Path(download_dir)
+        if not base_dir.is_absolute():
+            base_dir = padre_meddea._package_directory / base_dir
+    else:
+        base_dir = Path.home() / ".padre_meddea" / "data" / "drm"
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    for file_token, file_name in file_ids.items():
+        file_path = base_dir / file_name
+        if not file_path.exists():
+            url = f"https://drive.google.com/uc?export=download&id={file_token}"
+            output_path = file_path
+            urllib.request.urlretrieve(url, output_path)
+    return [base_dir / file_name for file_name in file_ids.values()]
 
 
 def get_calfunc_barium_rough(spec: Spectrum1D, plot: bool = False):

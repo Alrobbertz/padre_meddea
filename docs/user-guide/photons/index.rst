@@ -9,3 +9,5 @@ This section describes tools for processing and analyzing photon data.
 
    photonlist
    decimation
+   energy_calibration
+   detector_response

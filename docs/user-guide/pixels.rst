@@ -12,13 +12,13 @@ To faciliate this task, the `~padre_meddea.util.pixels.PixelList` is provided.
 
 Each pixel is identified by its asic number, 0 to 3, and pixel number, 0 to 11.
 
-.. code-block:: python
+.. doctest::
 
    >>> from padre_meddea.util import PixelList
 
 We can create a `~padre_meddea.util.pixels.PixelList` in a variety of ways. First by just manually specifying each asic and pixel number pair:
 
-.. code-block:: python
+.. doctest::
 
    >>> pixel_list = PixelList(asics=[0, 1], pixels=[0, 1])
    >>> pixel_list
@@ -34,7 +34,7 @@ The id column provides a unique identifier for each pixel and the label provides
 
 Note that this object is a subclass of a `~astropy.table.Table` which means you can, for example, easily iterate over each element:
 
-.. code-block:: python
+.. doctest::
 
     >>> asics = [this_pixel['asic'] for this_pixel in pixel_list]
     >>> asics
@@ -47,7 +47,7 @@ Note that this object is a subclass of a `~astropy.table.Table` which means you 
 
 This also works for just one pixel:
 
-.. code-block:: python
+.. doctest::
 
    >>> pixel_list = PixelList(asics=[3], pixels=[11])
    >>> pixel_list
@@ -59,7 +59,7 @@ This also works for just one pixel:
 
 A few class methods make it easier to generate lists of pixels. For example, to get a list of all pixels:
 
-.. code-block:: python
+.. doctest::
 
    >>> pixel_list = PixelList().all()
    >>> pixel_list
@@ -81,7 +81,7 @@ A few class methods make it easier to generate lists of pixels. For example, to 
 
 You can also get a list of all large pixels or all small pixels:
 
-.. code-block:: python
+.. doctest::
 
     >>> all_large = PixelList().all_large()
     >>> print(len(all_large))
@@ -92,7 +92,7 @@ You can also get a list of all large pixels or all small pixels:
 
 It is also possible to get all large pixels or all small pixels from a set of asics:
 
-.. code-block:: python
+.. doctest::
 
     >>> all_large_det0 = PixelList().all_large(asics=[0])
     >>> print(len(all_large_det0))
@@ -111,7 +111,7 @@ It is also possible to get all large pixels or all small pixels from a set of as
 Finally, if given an existing pixel list, it is possible to select out a subset of pixels.
 This is most useful to select a subset of the pixels that are monitored through the summary spectrum data.
 
-.. code-block:: python
+.. doctest::
 
     >>> from padre_meddea.spectrum.spectrum import DEFAULT_SPEC_PIXEL_LIST
     >>> DEFAULT_SPEC_PIXEL_LIST.select_small()

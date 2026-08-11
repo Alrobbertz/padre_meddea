@@ -12,6 +12,9 @@ import padre_meddea.io.file_tools as file_tools
 @pytest.mark.parametrize(
     "bin_file,expected_data_type",
     [
+        ("padreMDA0_260704194521_cal.dat", "photon"),
+        ("padreMDA0_260704194521_flare.dat", "photon"),
+        ("padreMDA0_260704194521_particles.dat", "photon"),
         ("padreMDA0_240916122901.dat", "photon"),
         ("padreMDA2_240916122851.dat", "spectrum"),
         ("padreMDU8_240916122904.dat", "housekeeping"),

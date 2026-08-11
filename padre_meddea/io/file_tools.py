@@ -198,7 +198,11 @@ def read_fits_l0l1_photon(filename: Path) -> PhotonList:
     packet_list = util.trim_timeseries(packet_list)
     event_list = util.trim_timeseries(event_list)
 
-    return PhotonList(packet_list, event_list)
+    hdu = fits.open(filename)
+    meta = dict(hdu[0].header)
+    hdu.close()
+
+    return PhotonList(packet_list, event_list, meta=meta)
 
 
 def read_fits_l0l1_housekeeping(filename: Path) -> tuple[TimeSeries, TimeSeries]:

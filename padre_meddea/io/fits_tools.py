@@ -550,22 +550,22 @@ def _init_hdul_structure(
     Returns
     -------
     dict
-        HDU dictionary structure formatted as:
-        {
-            0: {
-                "header": fits.Header,
-                "data": None,
-                "type": "primary"
-            },
-            1: {
-                "header": fits.Header,
-                "data": Table or np.ndarray,
-                "type": "bintable" or "image",
-                "name": str (optional)
-            },
-            ...
-        }
+        HDU dictionary structure formatted as::
 
+            {
+                0: {
+                    "header": fits.Header,
+                    "data": None,
+                    "type": "primary"
+                },
+                1: {
+                    "header": fits.Header,
+                    "data": Table or np.ndarray,
+                    "type": "bintable" or "image",
+                    "name": str (optional)
+                },
+                ...
+            }
     """
     hdul_dict = {}
 
@@ -669,13 +669,15 @@ def get_hdu_data_times(hdul_dict: dict[int, dict], hdu_name: str) -> Time:
     Parameters
     ----------
     hdul_dict : dict[int, dict]
-        Dictionary representation of a FITS HDU list, where each key is an index into the HDUL
-        Each value is a dict: {
-            "header": fits.Header,
-            "data": Table or np.ndarray,
-            "type": "bintable" or "image",
-            "name": str (optional)
-        }
+        Dictionary representation of a FITS HDU list, where each key is an index into the HDUL.
+        Each value is a dict::
+
+            {
+                "header": fits.Header,
+                "data": Table or np.ndarray,
+                "type": "bintable" or "image",
+                "name": str (optional)
+            }
     hdu_name : str
         Name of the HDU to extract time information from
 
@@ -785,13 +787,15 @@ def _filter_hdul_time_ranges(
     Parameters
     ----------
     hdul_dict : dict[int, dict]
-        Dictionary representation of a FITS HDU list, where each key is an index into the HDUL
-        Each value is a dict: {
-            "header": fits.Header,
-            "data": Table or np.ndarray,
-            "type": "bintable" or "image",
-            "name": str (optional)
-        }
+        Dictionary representation of a FITS HDU list, where each key is an index into the HDUL.
+        Each value is a dict::
+
+            {
+                "header": fits.Header,
+                "data": Table or np.ndarray,
+                "type": "bintable" or "image",
+                "name": str (optional)
+            }
 
     Returns
     -------

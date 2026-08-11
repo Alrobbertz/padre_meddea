@@ -17,3 +17,4 @@ The guidelines are
    tests
    docs
    maintainer_workflow
+   config

@@ -61,6 +61,8 @@ class PhotonList:
     event_list : TimeSeries
         The time series of event data
 
+    TODO: add metadata if opening from fits file
+
     Examples
     --------
     >>> from padre_meddea.io import read_file
@@ -69,23 +71,50 @@ class PhotonList:
     >>> this_spectrum = ph_list.spectrum(pixel_list=ph_list.pixel_list)  # doctest: +SKIP
     """
 
-    def __init__(self, pkt_list: TimeSeries, event_list: TimeSeries):
+    def __init__(
+        self, pkt_list: TimeSeries, event_list: TimeSeries, meta: dict | None = None
+    ):
         self.data = {"event_list": event_list, "pkt_list": pkt_list}
         self.event_list = event_list
         self.pkt_list = pkt_list
+        self.time = self.event_list.time
+        self.meta = meta
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            return self.event_list[key]
+            raise ValueError(
+                "PhotonList does not support indexing by integer. Use a slice with start and stop times instead."
+            )
+        if isinstance(key, str):
+            raise ValueError(
+                "PhotonList does not support indexing by string. Use a slice with start and stop times instead."
+            )
         elif isinstance(key, slice):
-            if isinstance(key.start, Time) and isinstance(key.stop, Time):
-                pkt_ind = (self.pkt_list.time > key.start) * (
-                    self.pkt_list.time < key.stop
+            if isinstance(key.start, int) or isinstance(key.stop, int):
+                raise ValueError(
+                    "PhotonList does not support indexing by integer. Use a slice with start and stop times instead."
                 )
-                ph_ind = (self.event_list.time > key.start) * (
-                    self.event_list.time < key.stop
+            if isinstance(key.start, str) and isinstance(key.stop, str):
+                start_time = Time(key.start)
+                stop_time = Time(key.stop)
+            elif isinstance(key.start, Time) and isinstance(key.stop, Time):
+                start_time = key.start
+                stop_time = key.stop
+            else:
+                raise ValueError(
+                    f"Invalid slice type, {type(key.start)} and {type(key.stop)}. Must be str or Time."
                 )
+            pkt_ind = (self.pkt_list.time >= start_time) * (
+                self.pkt_list.time <= stop_time
+            )
+            ph_ind = (self.event_list.time >= start_time) * (
+                self.event_list.time <= stop_time
+            )
+            if len(pkt_ind) == 0 or len(ph_ind) == 0:
+                raise ValueError(f"No data found between {start_time} and {stop_time}")
+            else:
                 return type(self)(self.pkt_list[pkt_ind], self.event_list[ph_ind])
+
         return self
 
     def __str__(self):
@@ -111,6 +140,54 @@ class PhotonList:
         pkt_list = vstack([self.pkt_list, other.pkt_list])
         return type(self)(pkt_list, event_list)
 
+    def calibrate(self):
+        """Calibrate atod values to energy units.
+
+        Code provided by Muriel Stiefel (FHNW)"""
+
+        # gain and offset values for each pixel from Olivier Limousin
+
+        # TODO: these values are for ground calibration, need to update for flight calibration
+        # TODO: calibration should not be hard coded, should be read from a calibration file and should vary as a function of time.
+
+        # fmt: off
+        gain_ground = np.array([7.955967, 7.932099, 7.895062, 7.9316874, 7.8909464, 7.869959,
+                                7.8884773, 7.916461, 7.851029, 7.9720163, 7.9074078, 7.911523,
+                                8.015638, 7.9798355, 7.955967, 7.9798355, 8.031687, 7.960082,
+                                7.8925924, 7.936214, 7.911523, 8.027983, 7.8831277, 7.973663,
+                                8.056378, 8.08107, 8.060494, 8.095884, 8.096708, 8.007819,
+                                8.098765, 8.079425, 8.165431, 8.068724, 8.100823, 8.126339,
+                                8.137038, 8.166666, 8.14568, 8.189301, 8.224691, 8.067902,
+                                8.155555, 8.235391, 8.203704, 8.197119, 8.14321, 8.179012])
+
+        offset_ground = np.array([39.34156, 38.674896, 45.065845, 40.530865, 48.19753, 44.732513,
+                            44.79424, 43.798355, 32.440327, 49.85597, 43.68313, 41.954735,
+                            54.736626, 57.23045, 73.37449, 52.831276, 49.436214, 55.64609,
+                            68.148155, 56.390945, 55.349792, 62.930042, 56.045265, 60.522636,
+                            42.44856, 40.27572, 36.514404, 47.024693, 29.596708, 34.958847,
+                            50.975307, 33.152264, 36.23868, 37.65844, 26.255144, 35.148148,
+                            59.93827, 55.01646, 59.666668, 47.312756, 43.85597, 63.68313,
+                            51.36214, 48.88066, 57.045265, 50.074074, 61.62963, 54.679012])
+        # fmt: on
+
+        gain_flight = gain_ground * 4
+        offset_flight = offset_ground * 4
+
+        if "baseline" not in self.event_list.colnames:
+            raise ValueError(
+                "Baseline column not found in event list. Cannot calibrate data."
+            )
+
+        atod = (
+            self.event_list["atod"].astype(float)
+            - self.event_list["baseline"].astype(float)
+        ) + 3572.86
+        pixel_index = self.event_list["asic"] * 12 + self.event_list["pixel"]
+
+        self.event_list["energy"] = (atod - offset_flight[pixel_index]) / gain_flight[
+            pixel_index
+        ]
+
     @property
     def calibrated(self):
         if "energy" in self.event_list.colnames:
@@ -129,10 +206,8 @@ class PhotonList:
 
     def spectrum(
         self,
-        pixel_list: PixelList,
-        bins=None,
-        baseline_sub: bool = False,
-        calibrate: bool = False,
+        pixel_list: PixelList | None = None,
+        bins: np.ndarray | None = None,
     ) -> Spectrum1D:
         """
         Create a spectrum
@@ -140,29 +215,28 @@ class PhotonList:
         Parameters
         ----------
         pixel_list : PixelList
-            A list of one or more pixels
+            A list of one or more pixels, if None, then uses all pixels
         bins : np.array
             The bin edges for the spectrum (see ~np.histogram).
-            If None, then uses np.arange(0, 2**12 - 1)
-        baseline_sub : bool
-            If True, then baseline measurements are subtracted if they exist
-            Note: not yet implemented.
-        calibrate : bool
-            If True, provide the calibrated spectrum
+            If None and the spectrum is not calibrated, then uses np.arange(0, 2**12 - 1) * u.pix,
+            If None and the spectrum is calibrated then uses np.arange(3, 100, 0.1) * u.keV
 
         Returns
         -------
         spectrum : Spectrum1D
         """
-        if not calibrate and bins is None:
-            bins = np.arange(0, 2**12 - 1) * u.pix
-        if calibrate and bins is None:
-            bins = np.arange(0, 100, 0.1) * u.keV
-        this_event_list = self._slice_event_list_pixels(pixel_list)
-        if calibrate:
+        if pixel_list:
+            this_event_list = self._slice_event_list_pixels(pixel_list)
+        else:
+            this_event_list = self.event_list
+
+        if self.calibrated:
+            bins = np.arange(3, 100, 0.1) * u.keV
             hit_energy = this_event_list["energy"]
         else:
+            bins = np.arange(0, 2**12 - 1) * u.pix
             hit_energy = this_event_list["atod"]
+
         data, new_bins = np.histogram(hit_energy, bins=bins.value)
 
         # for Spectrum1D, the spectral axis is at the center of the bins
@@ -176,10 +250,9 @@ class PhotonList:
 
     def lightcurve(
         self,
-        pixel_list: PixelList,
-        int_time: u.Quantity[u.s],
-        sr: SpectralRegion,
-        step: int = 10,
+        pixel_list: PixelList | None = None,
+        time_bin_size: u.Quantity | None = 1 * u.s,
+        energy_edges: u.Quantity | None = None,
     ) -> TimeSeries:
         """
         Create a light curve
@@ -201,18 +274,169 @@ class PhotonList:
         -------
         lc : TimeSeries
         """
-        this_event_list = self._slice_event_list_pixels(pixel_list)
-        # downsample the event list
-        this_event_list = TimeSeries(time=self.event_list.time[::step])
-        for this_sr in sr:
-            this_event_list = self._slice_event_list_sr(sr)
-            col_label = f"{this_sr.lower}-{this_sr.upper}_cts"
-            this_event_list[col_label] = np.ones(len(this_event_list))
-            ts = aggregate_downsample(
-                this_event_list, time_bin_size=int_time, aggregate_func=np.sum
+        if not self.calibrated:
+            raise ValueError(
+                "Data must be calibrated before plotting a spectrogram. Call the `calibrate()` method first."
             )
-            ts[col_label] *= step
+        if pixel_list is None:
+            energies_to_plot = self.event_list["energy"] * u.keV
+        else:
+            energies_to_plot = (
+                self._slice_event_list_pixels(pixel_list)["energy"] * u.keV
+            )
+        if energy_edges is None:
+            energy_min = np.min(energies_to_plot)
+            energy_max = np.max(energies_to_plot)
+            energy_edges = [energy_min, energy_max]
+            times_to_plot = self.event_list.time
+        else:
+            energy_min = np.min(energy_edges)
+            energy_max = np.max(energy_edges)
+            mask = (energies_to_plot >= energy_min) * (energies_to_plot <= energy_max)
+            energies_to_plot = energies_to_plot[mask]
+            times_to_plot = self.event_list.time[mask]
+
+        if len(times_to_plot) == 0:
+            raise ValueError("No events available after applying the energy filter")
+
+        tstart = times_to_plot[0]
+        tend = times_to_plot[-1]
+        time_edges = np.arange(
+            tstart.unix,
+            tend.unix + time_bin_size.to(u.s).value,
+            time_bin_size.to(u.s).value,
+        )
+        if len(time_edges) < 2:
+            time_edges = np.array(
+                [tstart.unix, tend.unix + time_bin_size.to(u.s).value]
+            )
+
+        hist, _, _ = np.histogram2d(
+            times_to_plot.unix,
+            energies_to_plot.to_value(u.keV),
+            bins=[time_edges, energy_edges.to_value(u.keV)],
+        )
+        ts = TimeSeries(time=Time(time_edges[:-1], format="unix"))
+        for i, this_range in enumerate(energy_edges[:-1]):
+            col_label = f"{energy_edges[i].value:0.0f}to{energy_edges[i + 1].value:0.0f}_{energy_edges[i + 1].unit}"
+            ts[col_label] = hist[:, i]
         return ts
+
+    def plot_spectrogram(
+        self,
+        energy_range: u.Quantity | None = None,
+        time_bin_size: u.Quantity | None = 1 * u.s,
+        energy_bin_size: u.Quantity | None = 0.1 * u.keV,
+        log_color: bool = True,
+        **imshow_kwargs,
+    ):
+        """
+        Plot a 2D spectrogram of photon events with time on the x-axis and energy on the y-axis.
+        Note, data must be calibrated first.
+
+        Parameters
+        ----------
+        energy_range : u.Quantity, optional
+            The energy range to plot. If None, uses the full range of the data.
+        time_bin_size : u.Quantity, optional
+            The time bin size for the spectrogram. Default is 1 second.
+            If None, uses the default value of 1 second.
+        energy_bin_size : u.Quantity, optional
+            The energy bin size for the spectrogram. Default is 0.1 keV.
+        log_color : bool, optional
+            Whether to use a logarithmic color scale. Default is True.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The figure object.
+        ax : matplotlib.axes.Axes
+            The axes object.
+        """
+        import matplotlib.colors as mcolors
+        import matplotlib.dates as mdates
+        import matplotlib.pyplot as plt
+
+        if not self.calibrated:
+            raise ValueError(
+                "Data must be calibrated before plotting a spectrogram. Call the `calibrate()` method first."
+            )
+        energies_to_plot = self.event_list["energy"] * u.keV
+
+        if energy_range is None:
+            energy_min = energies_to_plot.min()
+            energy_max = energies_to_plot.max()
+            times_to_plot = self.event_list.time
+        else:
+            energy_min, energy_max = energy_range
+            mask = (energies_to_plot >= energy_min) * (energies_to_plot <= energy_max)
+            energies_to_plot = energies_to_plot[mask]
+            times_to_plot = self.event_list.time[mask]
+
+        if len(times_to_plot) == 0:
+            raise ValueError("No events available after applying the energy filter")
+
+        tstart = times_to_plot[0]
+        tend = times_to_plot[-1]
+        time_edges = np.arange(
+            tstart.unix,
+            tend.unix + time_bin_size.to(u.s).value,
+            time_bin_size.to(u.s).value,
+        )
+        if len(time_edges) < 2:
+            time_edges = np.array(
+                [tstart.unix, tend.unix + time_bin_size.to(u.s).value]
+            )
+
+        energy_edges = (
+            np.arange(
+                energy_min.value,
+                energy_max.value + energy_bin_size.to(u.keV).value,
+                energy_bin_size.to(u.keV).value,
+            )
+            * u.keV
+        )
+        if len(energy_edges) < 2:
+            energy_edges = np.array([energy_min, energy_max])
+
+        hist, _, _ = np.histogram2d(
+            times_to_plot.unix,
+            energies_to_plot.to_value(u.keV),
+            bins=[time_edges, energy_edges.to_value(u.keV)],
+        )
+
+        fig, ax = plt.subplots()
+
+        if log_color:
+            hist_plot = np.where(hist > 0, hist, np.nan)
+            vmax = max(1, np.nanmax(hist_plot))
+            norm = mcolors.LogNorm(vmin=1, vmax=vmax)
+        else:
+            hist_plot = hist
+            norm = None
+
+        time_dt = [Time(t, format="unix").to_datetime() for t in time_edges]
+        time_num = mdates.date2num(time_dt)
+
+        image = ax.pcolormesh(
+            time_num,
+            energy_edges.to_value(u.keV),
+            hist_plot.T,
+            cmap="viridis",
+            norm=norm,
+            shading="auto",
+        )
+        plt.colorbar(image, ax=ax, label="Counts")
+
+        ax.set_xlabel(f"Time {tstart.iso} to {tend.iso}")
+        ax.set_ylabel("Energy [keV]")
+        ax.set_title(f"MeDDEA spectrogram (Δt={time_bin_size}, ΔE={energy_bin_size})")
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+        ax.set_xlim(time_num[0], time_num[-1])
+
+        fig.autofmt_xdate()
+
+        return fig, ax
 
     def data_rate(self) -> BinnedTimeSeries:
         """Return a BinnedTimeseries of the data rate.

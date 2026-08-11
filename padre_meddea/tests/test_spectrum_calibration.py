@@ -55,6 +55,14 @@ def test_get_ql_calibration_file():
     assert result.exists()
 
 
+def test_get_drm_files_returns_arf_and_rmf():
+    result = cal.get_drm_files()
+    assert len(result) >= 2
+    assert any(this_file.name.endswith("_arf.fits") for this_file in result)
+    assert any(this_file.name.endswith("_rmf.fits") for this_file in result)
+    assert all(this_file.exists() for this_file in result)
+
+
 def test_cal_spec():
     result = cal.get_ql_calibration_file(Time("2025-03-01T00:00"))
     lin_cal_params = np.load(result)

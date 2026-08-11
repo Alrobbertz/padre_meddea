@@ -93,7 +93,7 @@ Any other standard output, warnings, and errors should follow these rules:
 Logging and all other messages
 ==============================
 
-All other types of messages should use the logging system (see :ref:`_logger`).
+All other types of messages should use the logging system (see :py:mod:`padre_meddea.log`).
 
 Including C Code
 ================

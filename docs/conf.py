@@ -8,6 +8,7 @@
 import os
 import sys
 from datetime import datetime
+import logging
 
 sys.path.insert(0, os.path.abspath(".."))
 
@@ -23,8 +24,19 @@ release = __version__
 is_development = ".dev" in __version__
 # -- Project information -----------------------------------------------------
 
+# -- PADRE MeDDEA Sample Data --------------------------------------------------
+
+# Pre-download all sample data once before building the docs so that pages
+# using `padre_meddea.data.sample` don't each trigger their own download.
+from padre_meddea import log as padre_log
+import padre_meddea.data.sample as padre_sample
 
 
+_ori_log_level = padre_log.level
+padre_log.setLevel("DEBUG")
+padre_sample.download_all()
+padre_log.setLevel(_ori_log_level)
+padre_log.setLevel("WARNING")
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -56,12 +68,6 @@ plot_include_source = True
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
 autosummary_ignore_module_all = False
 autosummary_imported_members = False
-
-autodoc_default_options = {
-    "members": True,
-    "undoc-members": False,
-    "private-members": True,
-}
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
